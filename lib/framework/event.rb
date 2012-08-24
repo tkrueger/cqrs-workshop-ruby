@@ -1,12 +1,17 @@
+require "uuid"
+
 class Event
 
-  attr_accessor :aggregate_id
+  attr_reader :id, :aggregate_id
 
-  # The Event's revision, i.e. the index that this Event has in the global event stream.
-  # This will be set by the Repository/EventStore upon saving the Event.
-  attr_accessor :revision
-
+  # @param args
+  # creates an attribute with the given name and value and make it accesible via an attribute reader
+  # for each entry
   def initialize(args = {})
-    args.each { |key, val| self.send "#{key}=", val }
+    @id = UUID.new
+    args.each { |key, val|
+      self.instance_variable_set "@#{key}".to_sym, val
+      (class << self;self;end).send(:attr_reader, key.to_sym)
+    }
   end
 end

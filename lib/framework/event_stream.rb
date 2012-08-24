@@ -14,9 +14,7 @@ class EventStream
   end
 
   def current_revision
-    # TODO revision should not be in the events, but in the envelope
-    highest = @events.empty? ? -1 : @events.last.revision
-    return highest + @uncommitted_events.size
+    @events.size + @uncommitted_events.size
   end
 
   # Appends events to this stream. These will be marked as uncommitted.

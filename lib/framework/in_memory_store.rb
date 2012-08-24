@@ -24,9 +24,10 @@ class InMemoryStore
 
   def commit(event_stream)
     event_stream.uncommitted_events.map do |event|
-      event.revision = next_revision
+      # TODO make this an envelope
+      #event.revision = next_revision
       # TODO serialize event to JSON
-      Record.new(event.aggregate_id, event.revision, event)
+      Record.new(event.aggregate_id, next_revision, event)
     end
     append event_stream.uncommitted_events
     event_stream.on_committed
