@@ -1,39 +1,14 @@
 require "uuid"
-
 require_relative "../../lib/framework/event"
+require_relative "../../lib/framework/aggregate"
 
-module CQRS
-
-  module Aggregate
-
-    attr_reader :id, :revision, :unsaved_events
-
-    def initialize()
-      @id = nil
-      @revision = 0
-      @unsaved_events = []
-    end
-
-    def reconstitute_from events
-      events.each {|evt| apply evt}
-      @unsaved_events.clear
-      self
-    end
-
-    def has_unsaved_events?
-      !@unsaved_events.empty?
-    end
-
-    def apply event
-      self.send "when#{event.class.name.split("::").last}", event
-      @revision += 1
-      @unsaved_events << event
-    end
-  end
-end
-
+# provides a demo implementation of an Aggregate
 module Demo
 
+  # externalizing the state has a number of positive effects. One of these
+  # is a clean separattion of state and state chaning methods on the one hand
+  # and the Aggregate's interface methods on th other hand. This reduces temptation
+  # to cheat and change state in the Aggregate itself (SOC).
   module DemoAggregateState
     attr_reader :name
 
@@ -137,11 +112,4 @@ describe  "Aggregates" do
     end
   end
 
-  describe "Events" do
-    it { Event.new({}).id.should be_a UUID }
-
-    it "assigns attributes and creates readers" do
-      Event.new(:some_att => "some value").some_att.should == "some value"
-    end
-  end
 end
