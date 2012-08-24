@@ -2,71 +2,83 @@ require "uuid"
 
 require_relative "../../lib/framework/event"
 
-# these have to be declared mostly to have some point where the attributes can
-# be looked up without using reflection on the Event instance
-class DemoAggregateCreated < Event
-  def initialize  entity_id
-    super :entity_id => entity_id
+module CQRS
+
+  module Aggregate
+
+    attr_reader :id, :revision, :unsaved_events
+
+    def initialize()
+      @id = nil
+      @revision = 0
+      @unsaved_events = []
+    end
+
+    def reconstitute_from events
+      events.each {|evt| apply evt}
+      @unsaved_events.clear
+      self
+    end
+
+    def has_unsaved_events?
+      !@unsaved_events.empty?
+    end
+
+    def apply event
+      self.send "when#{event.class.name.split("::").last}", event
+      @revision += 1
+      @unsaved_events << event
+    end
   end
 end
 
-class DemoAggregateNameChanged < Event
-  def initialize demo_aggregate, name
-    super :demo_aggregate => demo_aggregate, :name => name
-  end
-end
+module Demo
 
-module Aggregate
+  module DemoAggregateState
+    attr_reader :name
 
-  attr_reader :id, :revision, :unsaved_events
+    def whenDemoAggregateCreated event
+      @id = event.entity_id
+    end
 
-  def initialize()
-    @id = nil
-    @revision = 0
-    @unsaved_events = []
-  end
+    def whenDemoAggregateNameChanged event
+      @name = event.name
+    end
 
-  def reconstitute_from events
-    events.each {|evt| apply evt}
-    @unsaved_events.clear
-    self
   end
 
-  def has_unsaved_events?
-    !@unsaved_events.empty?
+  # these have to be declared mostly to have some point where the attributes can
+  # be looked up without using reflection on the Event instance
+  class DemoAggregateCreated < Event
+    def initialize  entity_id
+      super :entity_id => entity_id
+    end
   end
 
-  def apply event
-    self.send "when#{event.class.name}", event
-    @revision += 1
-    @unsaved_events << event
-  end
-end
-
-module DemoAggregateState
-  attr_reader :name
-
-  def whenDemoAggregateCreated event
-    @id = event.entity_id
+  class DemoAggregateNameChanged < Event
+    def initialize demo_aggregate, name
+      super :demo_aggregate => demo_aggregate, :name => name
+    end
   end
 
-  def whenDemoAggregateNameChanged event
-    @name = event.name
-  end
+  class DemoAggregate
 
-end
+    include CQRS::Aggregate
+    include DemoAggregateState
 
-class DemoAggregate
+    def create(id)
+      apply(DemoAggregateCreated.new id)
+    end
 
-  include Aggregate
-  include DemoAggregateState
+    def change_name new_name
+      apply DemoAggregateNameChanged.new :id => @id, :name => new_name
+    end
 
-  def create(id)
-    apply(DemoAggregateCreated.new id)
   end
 
 end
 
+include Demo
 
 describe  "Aggregates" do
   describe "creation" do
